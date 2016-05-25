@@ -75,6 +75,27 @@ on fs
     # HTC feature: Support multiple firmware image mount points
     write /sys/module/firmware_class/parameters/fw_path /firmware/adsp,/firmware/radio,/firmware/slpi,/firmware/venus,/firmware/wsd,/vendor/firmware
 
+    # Mount cradio image
+    mkdir /firmware/cradio 0771 system system
+    wait /dev/block/bootdevice/by-name/cradio
+    mount vfat /dev/block/bootdevice/by-name/cradio /firmware/cradio ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    #RIL+
+    #mount rfg_3
+    mkdir /firmware/wsd 0500 rfs rfs
+    wait /dev/block/bootdevice/by-name/rfg_3
+    mount vfat /dev/block/bootdevice/by-name/rfg_3 /firmware/wsd ro shortname=lower,uid=3012,gid=3012,dmask=277,fmask=377
+    #RIL-
+
+on post-fs
+
+# +SSD_RIL: TMO trustonic daemon
+service tsdaemon /system/bin/tsdaemon
+    class main
+    user radio
+    group system
+# -SSD_RIL: TMO trustonic daemon
+
 on post-fs-data
     # Create directory for tombstone
     mkdir /data/tombstones 0771 system system
@@ -502,6 +523,16 @@ service qti /system/vendor/bin/qti
     class main
     user radio
     group radio net_raw diag usb net_admin
+
+service ril-daemon /system/bin/rild
+    class core
+    socket rild stream 660 root radio
+    socket sap_uim_socket1 stream 660 bluetooth bluetooth
+    socket rild-debug stream 660 radio system
+    socket cfiat stream 660 radio inet
+    socket kipc stream 660 radio inet
+    user root
+    group radio cache inet misc audio log qcom_diag carrier
 
 service rmt_storage /system/bin/rmt_storage
     class core
